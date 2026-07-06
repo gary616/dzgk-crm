@@ -310,7 +310,7 @@ def _migrate_passwords():
     db = get_db()
     rows = q('SELECT id, data FROM users').fetchall()
     if IS_PG:
-        rows = [(r[0], json.loads(r[1])) for r in rows]
+        rows = [(r['id'], json.loads(r['data'])) for r in rows]
     else:
         rows = [(r['id'], json.loads(r['data'])) for r in rows]
     for uid, data in rows:
@@ -369,13 +369,50 @@ def bump_version(table=None, item_id=None):
 
 
 
+# 为 PostgreSQL 提供兼容 sqlite3.Row 的包装类
+class _PGCompatRow:
+    """包装 RealDictRow，同时支持 [0] 和 ['data'] 访问"""
+    __slots__ = ('_keys', '_values')
+    def __init__(self, row):
+        self._keys = list(dict(row).keys())
+        self._values = list(dict(row).values())
+    def __getitem__(self, key):
+        if isinstance(key, (int,)):
+            return self._values[key]
+        try:
+            idx = self._keys.index(key)
+            return self._values[idx]
+        except ValueError:
+            raise KeyError(key)
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except (KeyError, IndexError):
+            return default
+
 def q(sql, params=None):
     """统一的参数化查询，自动适配 SQLite(?) / PostgreSQL(%s)"""
     db = get_db()
     if IS_PG:
         sql = sql.replace('?', '%s')
+        cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        if params is None:
+            cur.execute(sql)
+        else:
+            cur.execute(sql, params)
+        original_fetchone = cur.fetchone
+        original_fetchall = cur.fetchall
+        def _pg_fetchone():
+            row = original_fetchone()
+            return _PGCompatRow(row) if row is not None else None
+        def _pg_fetchall():
+            return [_PGCompatRow(r) for r in original_fetchall()]
+        cur.fetchone = _pg_fetchone
+        cur.fetchall = _pg_fetchall
+        return cur
     if params is None:
         return db.execute(sql)
+    return db.execute(sql, params)
     return db.execute(sql, params)
 
 
@@ -634,7 +671,7 @@ def _fix_order_pr_field(now):
     """迁移：修复订单子项中 pr 字段不是数组的问题"""
     rows = q('SELECT id, data FROM orders').fetchall()
     for r in rows:
-        o = json.loads(r['data']) if not IS_PG else json.loads(r[0])
+        o = json.loads(r['data'])
         changed = False
         if 'items' in o and isinstance(o['items'], list):
             for it in o['items']:
@@ -807,7 +844,7 @@ def api_addresses():
             # 读取删除前的数据，记录日志
             rows = q('SELECT data FROM addresses WHERE id = ?', [int(id_)]).fetchall()
             if rows:
-                item = json.loads(rows[0]['data']) if not IS_PG else json.loads(rows[0][0])
+                item = json.loads(rows[0]['data'])
                 _log_audit('delete', 'addresses', id_, f'地址: {item.get("ad","")} {item.get("rm","")} - {item.get("co","")}')
             q('DELETE FROM addresses WHERE id = ?', [int(id_)])
             db.commit()
@@ -917,7 +954,7 @@ def api_orders():
         if id_:
             rows = q('SELECT data FROM orders WHERE id = ?', [int(id_)]).fetchall()
             if rows:
-                item = json.loads(rows[0]['data']) if not IS_PG else json.loads(rows[0][0])
+                item = json.loads(rows[0]['data'])
                 _log_audit('delete', 'orders', id_, f'订单: {item.get("bn","")} - {item.get("co","")}')
             q('DELETE FROM orders WHERE id = ?', [int(id_)])
             db.commit()
@@ -969,7 +1006,7 @@ def api_customers():
         if id_:
             rows = q('SELECT data FROM customers WHERE id = ?', [int(id_)]).fetchall()
             if rows:
-                item = json.loads(rows[0]['data']) if not IS_PG else json.loads(rows[0][0])
+                item = json.loads(rows[0]['data'])
                 _log_audit('delete', 'customers', id_, f'客户: {item.get("co","")} - {item.get("nn","")}')
             q('DELETE FROM customers WHERE id = ?', [int(id_)])
             db.commit()
@@ -1021,7 +1058,7 @@ def api_expenses():
         if id_:
             rows = q('SELECT data FROM expenses WHERE id = ?', [int(id_)]).fetchall()
             if rows:
-                item = json.loads(rows[0]['data']) if not IS_PG else json.loads(rows[0][0])
+                item = json.loads(rows[0]['data'])
                 _log_audit('delete', 'expenses', id_, f'费用: {item.get("bn","")} - {item.get("co","")}')
             q('DELETE FROM expenses WHERE id = ?', [int(id_)])
             db.commit()
@@ -1073,7 +1110,7 @@ def api_users():
         if id_:
             rows = q('SELECT data FROM users WHERE id = ?', [int(id_)]).fetchall()
             if rows:
-                item = json.loads(rows[0]['data']) if not IS_PG else json.loads(rows[0][0])
+                item = json.loads(rows[0]['data'])
                 _log_audit('delete', 'users', id_, f'用户: {item.get("username","")} - {item.get("name","")}')
             q('DELETE FROM users WHERE id = ?', [int(id_)])
             db.commit()
@@ -1768,7 +1805,7 @@ def api_invoices():
         if id_:
             rows = q('SELECT data FROM invoices WHERE id = ?', [int(id_)]).fetchall()
             if rows:
-                item = json.loads(rows[0]['data']) if not IS_PG else json.loads(rows[0][0])
+                item = json.loads(rows[0]['data'])
                 _log_audit('delete', 'invoices', id_, f'发票: {item.get("title","")}')
             q('DELETE FROM invoices WHERE id = ?', [int(id_)])
             db.commit()
@@ -1877,8 +1914,8 @@ def api_sync_notifications():
     old_rows = q('SELECT id, data FROM notifications').fetchall()
     old_map = {}
     for r in old_rows:
-        item = json.loads(r['data']) if not IS_PG else json.loads(r[0])
-        old_map[r['id'] if not IS_PG else r[0]] = item
+        item = json.loads(r['data'])
+        old_map[r['id']] = item
 
     new_ids = set()
     for item in data:
