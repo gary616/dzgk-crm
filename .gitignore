@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.log
+
+# Database (local SQLite, PG export is committed)
+crm_shared.db
+crm_test.db
+
+# Environment
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Uploads (recreated on server)
+uploads/
+
+# Migration output (keep if committed)
+# crm_pg_export.sql  # Uncomment if you've imported the data
+
+# WorkBuddy developer config
+.workbuddy/
+
+# Database backups
+backups/

@@ -1,0 +1,340 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>地址挂靠管理系统</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="loading-overlay"><div class="loading-spinner"></div><div class="loading-text">加载中...</div></div>
+
+<!-- 登录页 -->
+<div id="login-page" class="page active">
+<div class="login-bg"><div class="login-card">
+<div class="login-logo"><div class="logo-icon">🏢</div><h1>地址挂靠管理系统</h1><p>Address Registration Management System</p></div>
+<div class="login-form">
+<div class="role-tabs">
+<button class="role-tab active" data-role="admin">管理员</button>
+<button class="role-tab" data-role="sales">销售</button>
+<button class="role-tab" data-role="neiqin">内勤</button>
+<button class="role-tab" data-role="finance">财务</button>
+</div>
+<div class="form-group"><label>账号</label><select id="login-username" onchange="onLoginUserChange()"><option value="">请选择账号</option></select></div>
+<div class="form-group"><label>密码</label><div style="position:relative;display:flex;align-items:center"><input type="password" id="login-password" placeholder="请输入密码" style="flex:1;padding-right:36px"/><span id="pwd-toggle" onclick="togglePwdVisibility()" style="position:absolute;right:8px;cursor:pointer;font-size:16px;color:#9ca3af;user-select:none">👁️</span></div></div>
+<div class="login-tip" id="login-tip"></div>
+<button class="btn-login" id="btn-login" data-action="login">登 录</button>
+</div></div></div></div></div>
+
+<!-- 主系统 -->
+<div id="main-app">
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-header"><div class="sidebar-logo">🏢</div><div class="sidebar-title"><span class="sidebar-name">地址挂靠系统</span><span class="sidebar-version">v2.67<span class="sidebar-env-badge" id="env-badge" style="display:none">DEV</span></span></div><button class="sidebar-toggle" onclick="toggleSidebar()">&#9776;</button></div>
+<div class="sidebar-user"><div class="user-avatar" id="user-avatar">A</div><div class="user-info"><div class="user-name" id="user-name">管理员</div><div class="user-role" id="user-role">超级管理员</div></div></div>
+<nav class="sidebar-nav" id="sidebar-nav">
+<a class="nav-item active" onclick="return navigateTo('dashboard')" data-page="dashboard"><span class="nav-icon">📊</span><span class="nav-text">数据看板</span></a>
+<a class="nav-item" onclick="return navigateTo('address')" data-page="address"><span class="nav-icon">📍</span><span class="nav-text">地址管理</span></a>
+<a class="nav-item" onclick="return navigateTo('renew')" data-page="renew"><span class="nav-icon">🔔</span><span class="nav-text">续费提醒</span><span class="badge" id="renew-badge">0</span></a>
+<a class="nav-item" onclick="return navigateTo('orders')" data-page="orders"><span class="nav-icon">📋</span><span class="nav-text">订单管理</span></a>
+<a class="nav-item" onclick="return navigateTo('customers')" data-page="customers"><span class="nav-icon">👥</span><span class="nav-text">客户管理</span></a>
+<a class="nav-item" onclick="return navigateTo('performance')" data-page="performance"><span class="nav-icon">🏆</span><span class="nav-text">业绩管理</span></a>
+<a class="nav-item" onclick="return navigateTo('income')" data-page="income"><span class="nav-icon">💰</span><span class="nav-text">公司总收入</span></a>
+<a class="nav-item" onclick="return navigateTo('expenses')" data-page="expenses"><span class="nav-icon">💸</span><span class="nav-text">财务支出</span></a>
+<a class="nav-item" onclick="return navigateTo('invoice')" data-page="invoice"><span class="nav-icon">📄</span><span class="nav-text">开票申请</span></a>
+<a class="nav-item" onclick="return navigateTo('approval')" data-page="approval"><span class="nav-icon">✅</span><span class="nav-text">审批中心</span><span id="approval-badge" class="badge" style="display:none">0</span></a>
+<a class="nav-item" onclick="return navigateTo('salary')" data-page="salary"><span class="nav-icon">💵</span><span class="nav-text">工资计算</span></a>
+<a class="nav-item" onclick="return navigateTo('users')" data-page="users" data-roles="admin"><span class="nav-icon">👤</span><span class="nav-text">账号管理</span></a>
+<a class="nav-item" onclick="return navigateTo('audit')" data-page="audit" data-roles="admin"><span class="nav-icon">📜</span><span class="nav-text">操作日志</span></a>
+<a class="nav-item" onclick="return navigateTo('notifications')" data-page="notifications"><span class="nav-icon">🔔</span><span class="nav-text">消息通知</span><span id="notif-sidebar-badge" class="badge" style="display:none">0</span></a>
+<a class="nav-item" onclick="return navigateTo('contracts')" data-page="contracts"><span class="nav-icon">📝</span><span class="nav-text">合同管理</span></a>
+<a class="nav-item" onclick="return navigateTo('settings')" data-page="settings" id="nav-settings" style="display:none"><span class="nav-icon">⚙️</span><span class="nav-text">设置</span></a>
+</nav>
+<div class="sidebar-footer"><button class="btn-logout" onclick="doLogout()">退出登录</button></div>
+</aside>
+
+<main class="main-content" id="main-content">
+<div class="env-top-banner" id="env-top-banner">🧪 测试环境 · 此处数据不产生实际影响</div>
+<header class="topbar"><button class="topbar-menu" onclick="toggleMobileSidebar()">&#9776;</button><div class="topbar-breadcrumb" id="topbar-breadcrumb">数据看板</div><div class="global-search"><input type="text" id="global-search-input" placeholder="搜索客户、订单、地址..." oninput="onGlobalSearchInput(this.value)" onkeydown="if(event.key==='Enter')onGlobalSearch(this.value)" onblur="setTimeout(function(){closeGlobalSearch()},200)" onfocus="onGlobalSearch(this.value)"/><span class="search-icon">🔍</span><div class="search-results-dropdown" id="search-results-dropdown"></div></div><div class="topbar-right"><div class="topbar-update" id="topbar-update">🕐 部署 <span id="update-time">加载中...</span></div><div class="notif-bell" id="notif-bell" onclick="toggleNotifDropdown()" style="position:relative;cursor:pointer;font-size:18px">🔔<span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-6px;background:#ef4444;color:#fff;font-size:9px;padding:1px 4px;border-radius:8px;min-width:14px;text-align:center;line-height:14px">0</span></div><div id="notif-dropdown" style="display:none;position:absolute;top:100%;right:0;width:320px;max-height:400px;overflow-y:auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;margin-top:4px"></div><div class="topbar-time" id="topbar-time"></div></div></header>
+<div class="content-area">
+
+<!-- 数据看板 -->
+<section id="page-dashboard" class="content-page active">
+<div class="page-header"><h2>数据看板</h2><span class="page-subtitle">实时业务数据概览</span><div class="page-actions"><button class="btn-warning" onclick="exportBusinessReport()" style="font-size:12px">📊 导出经营报表</button></div></div>
+<div class="stats-grid">
+<div class="stat-card blue" style="cursor:pointer" onclick="navigateTo('orders')" title="点击查看订单管理"><div class="stat-icon">📋</div><div class="stat-info"><div class="stat-value" id="stat-total-orders">0</div><div class="stat-label">总订单数</div></div></div>
+<div class="stat-card green" style="cursor:pointer" onclick="navigateTo('income')" title="点击查看收入明细"><div class="stat-icon">💰</div><div class="stat-info"><div class="stat-value" id="stat-total-income">¥0</div><div class="stat-label">总收款金额</div></div></div>
+<div class="stat-card orange" style="cursor:pointer" onclick="navigateTo('address')" title="点击查看地址管理"><div class="stat-icon">📍</div><div class="stat-info"><div class="stat-value" id="stat-total-address">0</div><div class="stat-label">地址总数</div></div></div>
+<div class="stat-card red" style="cursor:pointer" onclick="navigateTo('renew')" title="点击查看续费提醒"><div class="stat-icon">⚠️</div><div class="stat-info"><div class="stat-value" id="stat-renew-count">0</div><div class="stat-label">待续费地址</div></div></div>
+<div class="stat-card purple" style="cursor:pointer" onclick="navigateTo('customers')" title="点击查看客户管理"><div class="stat-icon">👥</div><div class="stat-info"><div class="stat-value" id="stat-total-customers">0</div><div class="stat-label">总客户数</div></div></div>
+<div class="stat-card teal" style="cursor:pointer" onclick="navigateTo('approval')" title="点击查看审批中心"><div class="stat-icon">💹</div><div class="stat-info"><div class="stat-value" id="stat-total-profit">¥0</div><div class="stat-label">总利润</div></div></div>
+</div>
+<!-- 快捷操作栏 -->
+<div id="quick-actions" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap"></div>
+<!-- 待办事项面板 -->
+<div id="dashboard-todo" class="chart-card" style="margin-bottom:16px;display:none">
+  <h3>📌 今日待办</h3>
+  <div id="todo-list" style="font-size:13px;line-height:1.8"></div>
+</div>
+<div class="dashboard-grid">
+<div class="chart-card"><h3>业务员业绩排行</h3><div id="performance-chart" class="bar-chart"></div></div>
+<div class="chart-card"><h3>近期待续费提醒</h3><div id="renew-alert-list" class="renew-list"></div></div>
+<div class="chart-card"><h3>订单类型分布</h3><div id="order-type-chart" class="pie-chart-container"></div></div>
+<div class="chart-card"><h3>本月收支概览</h3><div id="monthly-summary" class="monthly-summary"></div></div>
+</div>
+</section>
+
+<!-- 地址管理 -->
+<section id="page-address" class="content-page">
+<div class="page-header"><h2>地址管理</h2><div class="page-actions">
+<div class="search-box"><input type="text" id="address-search" placeholder="搜索地址、单位名称、业务员..." oninput="renderAddressTable()"/></div>
+<button class="btn-secondary" onclick="openAddrModal()">+ 新增地址</button>
+<button class="btn-secondary" onclick="downloadAddrTemplate()" id="addr-download-template" style="display:none">📥 下载模板</button>
+<button class="btn-secondary" onclick="openImportModal()" id="addr-import" style="display:none">批量导入</button>
+<button class="btn-warning" onclick="exportAddress()" id="addr-export" style="display:none">导出</button><button class="btn-secondary" onclick="resetColumns()" title="恢复被隐藏的列">恢复列</button></div></div>
+<div class="table-container">
+<div class="batch-bar" id="addr-batch-bar"><span>已选 <span class="batch-count" id="addr-batch-count">0</span> 项</span><button class="btn-danger" onclick="batchDeleteAddr()" style="padding:4px 12px;font-size:12px">批量删除</button><button class="btn-primary" onclick="batchExportAddr()" style="padding:4px 12px;font-size:12px">批量导出</button><button class="btn-secondary" onclick="clearAddrSelection()" style="padding:4px 12px;font-size:12px">取消选择</button></div>
+<table class="data-table"><thead>
+<tr><th style="width:36px;text-align:center"><input type="checkbox" id="addr-select-all" onchange="toggleAllAddr(this.checked)"></th><th style="width:40px;text-align:center">序号</th><th data-col="t" onclick="openFilterPopup('t',this)">类型</th><th data-col="ad" onclick="openFilterPopup('ad',this)">地址</th><th data-col="rm" onclick="openFilterPopup('rm',this)">房间号</th><th data-col="pr" onclick="openFilterPopup('pr',this)">参考价</th><th data-col="status" onclick="openFilterPopup('status',this)">状态</th><th data-col="bn" onclick="openFilterPopup('bn',this)">业务编号</th><th data-col="co" onclick="openFilterPopup('co',this)">单位名称</th><th data-col="sl" onclick="openFilterPopup('sl',this)">业务员</th><th data-col="nn" onclick="openFilterPopup('nn',this)">客户昵称</th><th data-col="sd" onclick="openFilterPopup('sd',this)">开始时间</th><th data-col="ed" onclick="openFilterPopup('ed',this)">结束时间</th><th data-col="pd" onclick="openFilterPopup('pd',this)">收款时间</th><th data-col="pa" onclick="openFilterPopup('pa',this)">收款账号</th><th data-col="pm" onclick="openFilterPopup('pm',this)">收款金额</th><th data-col="rs" onclick="openFilterPopup('rs',this)">续费状态</th><th data-col="lp" onclick="openFilterPopup('lp',this)">法人</th><th data-col="ph" onclick="openFilterPopup('ph',this)">联系电话</th><th data-col="ex" onclick="openFilterPopup('ex',this)">异常</th><th>操作</th></tr>
+</thead><tbody id="address-tbody"></tbody></table></div>
+<div id="filter-popup" class="filter-popup" style="display:none"></div>
+<div class="pagination" id="address-pagination"></div>
+<span class="page-size-wrapper">每页显示 <select class="page-size-select" onchange="setPageSize(this.value)"><option value="15" selected>15</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select> 条</span>
+</section>
+
+<!-- 续费提醒 -->
+<section id="page-renew" class="content-page">
+<div class="page-header"><h2>续费提醒 <span id="renew-header-badge" class="nav-badge" style="display:none">0</span></h2><span class="page-subtitle">显示所有需要续费和异常的企业</span></div>
+<div class="renew-tabs">
+<button class="renew-tab active" onclick="setRenewTab(this,'need')">需要续费</button>
+<button class="renew-tab" onclick="setRenewTab(this,'abnormal')">异常企业</button>
+</div>
+<div class="table-container"><table class="data-table"><thead><tr><th style="width:40px;text-align:center">序号</th><th data-col="bn" onclick="openGFilterPopup('bn',this,_renewCtx)" style="cursor:pointer">业务编号</th><th data-col="co" onclick="openGFilterPopup('co',this,_renewCtx)" style="cursor:pointer">单位名称</th><th data-col="addr" onclick="openGFilterPopup('addr',this,_renewCtx)" style="cursor:pointer">地址</th><th data-col="sl" onclick="openGFilterPopup('sl',this,_renewCtx)" style="cursor:pointer">业务员</th><th data-col="nn" onclick="openGFilterPopup('nn',this,_renewCtx)" style="cursor:pointer">客户昵称</th><th data-col="ph" onclick="openGFilterPopup('ph',this,_renewCtx)" style="cursor:pointer">联系电话</th><th data-col="sd" onclick="openGFilterPopup('sd',this,_renewCtx)" style="cursor:pointer">开始时间</th><th data-col="ed" onclick="openGFilterPopup('ed',this,_renewCtx)" style="cursor:pointer">结束时间</th><th data-col="rd" onclick="openGFilterPopup('rd',this,_renewCtx)" style="cursor:pointer">剩余天数</th><th data-col="pm" onclick="openGFilterPopup('pm',this,_renewCtx)" style="cursor:pointer">收款金额</th><th data-col="rs" onclick="openGFilterPopup('rs',this,_renewCtx)" style="cursor:pointer">续费状态</th><th data-col="ex" onclick="openGFilterPopup('ex',this,_renewCtx)" style="cursor:pointer">异常</th><th>操作</th></tr></thead><tbody id="renew-tbody"></tbody></table></div>
+</section>
+
+<!-- 订单管理 -->
+<section id="page-orders" class="content-page">
+<div class="page-header"><h2>订单管理</h2><div class="page-actions">
+<div class="search-box"><input type="text" id="order-search" oninput="renderOrdersTable()" placeholder="搜索业务编号、客户昵称、单位名称、业务员、对接账号、内勤、业务类型..."/></div>
+<button class="btn-primary" onclick="openOrderModal()">+ 新增订单</button>
+<button class="btn-secondary" onclick="downloadOrderTemplate()" id="order-download-template" style="display:none">📥 下载模板</button>
+<button class="btn-secondary" onclick="openOrderImportModal()" id="order-import" style="display:none">批量导入</button>
+<button class="btn-warning" onclick="exportOrders()" id="order-export" style="display:none">导出</button><button class="btn-secondary" onclick="resetOrderColumns()" title="恢复被隐藏的列">恢复列</button></div></div>
+<div class="table-container"><table class="data-table resizable-table"><thead>
+<tr><th style="width:30px;text-align:center"></th><th style="width:36px;text-align:center">序号</th><th data-col="od" onclick="openOrderFilterPopup('od',this)" style="width:80px;text-align:center">订单时间</th><th data-col="bn" onclick="openOrderFilterPopup('bn',this)" style="text-align:center">业务编号</th><th data-col="ic" onclick="openOrderFilterPopup('ic',this)" style="text-align:center">地址总数</th><th data-col="sl" onclick="openOrderFilterPopup('sl',this)" style="text-align:center">业务员</th><th data-col="nn" onclick="openOrderFilterPopup('nn',this)" style="text-align:center">客户昵称</th><th data-col="ac" onclick="openOrderFilterPopup('ac',this)" style="text-align:center">对接账号</th><th data-col="ct" onclick="openOrderFilterPopup('ct',this)" style="text-align:center">客户类型</th><th data-col="pg" onclick="openOrderFilterPopup('pg',this)" style="text-align:center">跟进进度</th><th data-col="pr_total" onclick="openOrderFilterPopup('pr_total',this)" style="text-align:center">总报价</th><th data-col="pm_total" onclick="openOrderFilterPopup('pm_total',this)" style="text-align:center">总收款</th><th data-col="unpaid" onclick="openOrderFilterPopup('unpaid',this)" style="text-align:center">未收款</th><th data-col="cost_total" onclick="openOrderFilterPopup('cost_total',this)" style="text-align:center">成本</th><th data-col="exp_total" onclick="openOrderFilterPopup('exp_total',this)" style="text-align:center">总支出</th><th data-col="profit_total" onclick="openOrderFilterPopup('profit_total',this)" style="text-align:center">利润</th><th data-col="nq" onclick="openOrderFilterPopup('nq',this)" style="text-align:center">内勤</th><th data-col="rm" onclick="openOrderFilterPopup('rm',this)" style="text-align:center">备注</th><th style="text-align:left">操作</th></tr>
+</thead><tbody id="orders-tbody"></tbody></table></div>
+<div class="pagination" id="orders-pagination"></div>
+<span class="page-size-wrapper">每页显示 <select class="page-size-select" onchange="setPageSize(this.value)"><option value="15" selected>15</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select> 条</span>
+</section>
+
+<!-- 客户管理 -->
+<section id="page-customers" class="content-page">
+<div class="page-header"><h2>客户管理</h2><div class="page-actions">
+<div class="search-box"><input type="text" id="customer-search" oninput="renderCustomerTable()" placeholder="搜索客户公司、昵称、微信..."/></div>
+<select id="customer-filter-type" class="filter-select" onchange="renderCustomerTable()"><option value="">全部客户类型</option><option value="新客户">新客户</option><option value="老客户">老客户</option></select>
+<button class="btn-primary" onclick="openCustModal()">+ 新增客户</button>
+<button class="btn-secondary" onclick="downloadCustTemplate()" id="cust-download-template" style="display:none">📥 下载模板</button>
+<button class="btn-secondary" onclick="openCustImportModal()" id="cust-import" style="display:none">批量导入</button>
+<button class="btn-warning" onclick="exportCustomers()" id="cust-export" style="display:none">导出</button></div></div>
+<div class="table-container"><table class="data-table"><thead><tr><th style="width:40px;text-align:center">序号</th><th data-col="nn" onclick="openGFilterPopup('nn',this,_custCtx)" style="cursor:pointer">客户昵称</th><th data-col="co" onclick="openGFilterPopup('co',this,_custCtx)" style="cursor:pointer">单位名称</th><th data-col="wx" onclick="openGFilterPopup('wx',this,_custCtx)" style="cursor:pointer">微信</th><th data-col="phone" onclick="openGFilterPopup('phone',this,_custCtx)" style="cursor:pointer">联系电话</th><th data-col="ac" onclick="openGFilterPopup('ac',this,_custCtx)" style="cursor:pointer">对接账号</th><th data-col="sl" onclick="openGFilterPopup('sl',this,_custCtx)" style="cursor:pointer">业务员</th><th data-col="fd" onclick="openGFilterPopup('fd',this,_custCtx)" style="cursor:pointer">首次成交</th><th data-col="tp" onclick="openGFilterPopup('tp',this,_custCtx)" style="cursor:pointer">客户类型</th><th data-col="tags" onclick="openGFilterPopup('tags',this,_custCtx)" style="cursor:pointer">标签</th><th data-col="oc" onclick="openGFilterPopup('oc',this,_custCtx)" style="cursor:pointer">关联订单</th><th data-col="totalPm" onclick="openGFilterPopup('totalPm',this,_custCtx)" style="cursor:pointer">总收款</th><th data-col="unpaid" onclick="openGFilterPopup('unpaid',this,_custCtx)" style="cursor:pointer">未收款</th><th>操作</th></tr></thead><tbody id="customers-tbody"></tbody></table></div>
+<div class="pagination" id="customers-pagination"></div>
+<span class="page-size-wrapper">每页显示 <select class="page-size-select" onchange="setPageSize(this.value)"><option value="15" selected>15</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select> 条</span>
+</section>
+
+<!-- 业绩管理 -->
+<section id="page-performance" class="content-page">
+<div class="page-header"><h2>业绩管理</h2><div class="page-actions">
+<select id="perf-filter-month" class="filter-select" onchange="renderPerformance()"><option value="">全部月份</option></select>
+<select id="perf-filter-sales" class="filter-select" onchange="renderPerformance()"><option value="">全部业务员</option></select></div></div>
+<div class="stats-grid" style="margin-bottom:16px">
+<div class="stat-card teal"><div class="stat-icon">💹</div><div class="stat-info"><div class="stat-value" id="perf-total-profit">¥0</div><div class="stat-label">总利润</div></div></div>
+</div>
+<div class="performance-cards" id="performance-cards"></div>
+<div class="table-container" style="margin-top:24px"><table class="data-table"><thead><tr><th style="width:40px;text-align:center">序号</th><th data-col="n" onclick="openGFilterPopup('n',this,_perfCtx)" style="cursor:pointer">业务员</th><th data-col="rCnt" onclick="openGFilterPopup('rCnt',this,_perfCtx)" style="cursor:pointer">地址续费</th><th data-col="sCnt" onclick="openGFilterPopup('sCnt',this,_perfCtx)" style="cursor:pointer">地址销售</th><th data-col="oc" onclick="openGFilterPopup('oc',this,_perfCtx)" style="cursor:pointer">订单数</th><th data-col="income" onclick="openGFilterPopup('income',this,_perfCtx)" style="cursor:pointer">总收款</th><th data-col="cost" onclick="openGFilterPopup('cost',this,_perfCtx)" style="cursor:pointer">成本</th><th data-col="exp" onclick="openGFilterPopup('exp',this,_perfCtx)" style="cursor:pointer">支出</th><th data-col="profit" onclick="openGFilterPopup('profit',this,_perfCtx)" style="cursor:pointer">利润</th><th data-col="avg" onclick="openGFilterPopup('avg',this,_perfCtx)" style="cursor:pointer">客单利润</th><th data-col="nC" onclick="openGFilterPopup('nC',this,_perfCtx)" style="cursor:pointer">新客</th><th data-col="oC" onclick="openGFilterPopup('oC',this,_perfCtx)" style="cursor:pointer">老客</th></tr></thead><tbody id="perf-tbody"></tbody></table></div>
+</section>
+
+<!-- 公司总收入 -->
+<section id="page-income" class="content-page">
+<div class="page-header"><h2>公司总收入</h2><div class="page-actions">
+<select id="income-filter-month" class="filter-select" onchange="incomePage=1;renderIncomeTable()"><option value="">全部月份</option></select>
+<select id="income-filter-type" class="filter-select" onchange="incomePage=1;renderIncomeTable()"><option value="">全部业务类型</option><option value="地址销售">地址销售</option><option value="地址续费">地址续费</option></select>
+<button class="btn-warning" onclick="exportIncome()" id="income-export" style="display:none">导出</button></div></div>
+<div class="stats-grid" style="margin-bottom:24px">
+<div class="stat-card green"><div class="stat-icon">💰</div><div class="stat-info"><div class="stat-value" id="income-total">¥0</div><div class="stat-label">总收入</div></div></div>
+<div class="stat-card red"><div class="stat-icon">💸</div><div class="stat-info"><div class="stat-value" id="income-cost">¥0</div><div class="stat-label">总成本</div></div></div>
+<div class="stat-card purple"><div class="stat-icon">📤</div><div class="stat-info"><div class="stat-value" id="income-expense">¥0</div><div class="stat-label">总支出</div></div></div>
+<div class="stat-card blue"><div class="stat-icon">💹</div><div class="stat-info"><div class="stat-value" id="income-profit">¥0</div><div class="stat-label">总利润</div></div></div>
+<div class="stat-card orange"><div class="stat-icon">📈</div><div class="stat-info"><div class="stat-value" id="income-margin">0%</div><div class="stat-label">利润率</div></div></div>
+</div>
+<div class="table-container"><div style="border:1px solid #34d399;border-radius:8px;overflow:hidden;background:#f0fdf4">
+<div style="background:#d1fae5;padding:8px 12px;font-weight:600;font-size:13px;border-bottom:1px solid #34d399;display:flex;align-items:center;justify-content:space-between">
+<span>💰 收款记录</span>
+</div>
+<table class="data-table" style="border:none;margin:0;font-size:12px"><thead><tr style="background:#a7f3d0"><th style="padding:6px 8px;text-align:center;width:36px">序号</th><th data-col="bn" onclick="openGFilterPopup('bn',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">业务编号</th><th data-col="subBn" onclick="openGFilterPopup('subBn',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">子订单</th><th data-col="bt" onclick="openGFilterPopup('bt',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">类型</th><th data-col="sl" onclick="openGFilterPopup('sl',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">业务员</th><th data-col="co" onclick="openGFilterPopup('co',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">单位名称</th><th data-col="addr" onclick="openGFilterPopup('addr',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">地址</th><th data-col="pfTime" onclick="openGFilterPopup('pfTime',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">收款时间</th><th data-col="payAccount" onclick="openGFilterPopup('payAccount',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">收款账号</th><th data-col="pm" onclick="openGFilterPopup('pm',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">收款金额</th><th data-col="expTime" onclick="openGFilterPopup('expTime',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">支出时间</th><th data-col="cost" onclick="openGFilterPopup('cost',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">成本</th><th data-col="exp" onclick="openGFilterPopup('exp',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">支出</th><th data-col="profit" onclick="openGFilterPopup('profit',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">利润</th><th data-col="pfUser" onclick="openGFilterPopup('pfUser',this,_incCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">审批人</th><th style="padding:6px 8px;text-align:center">操作</th></tr></thead><tbody id="income-tbody"></tbody></table></div></div>
+<div class="pagination" id="income-pagination"></div>
+<span class="page-size-wrapper">每页显示 <select class="page-size-select" onchange="setPageSize(this.value)"><option value="15" selected>15</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select> 条</span>
+</section>
+
+<!-- 财务支出 -->
+<section id="page-expenses" class="content-page">
+<div class="page-header"><h2>财务支出</h2><div class="page-actions">
+<select id="exp-filter-month" class="filter-select" onchange="expensePage=1;renderExpensesTable()"><option value="">全部月份</option></select>
+<select id="exp-filter-account" class="filter-select" onchange="expensePage=1;renderExpensesTable()"><option value="">全部支出账号</option></select>
+<button class="btn-primary" id="exp-add-btn" onclick="openExpModal()">+ 新增支出</button>
+<button class="btn-warning" onclick="exportExpenses()" id="exp-export" style="display:none">导出</button></div></div>
+<div class="stats-grid" style="margin-bottom:24px">
+<div class="stat-card red"><div class="stat-icon">💸</div><div class="stat-info"><div class="stat-value" id="exp-total">¥0</div><div class="stat-label">总支出</div></div></div>
+<div class="stat-card orange"><div class="stat-icon">🏠</div><div class="stat-info"><div class="stat-value" id="exp-address-cost">¥0</div><div class="stat-label">成本合计</div></div></div>
+<div class="stat-card purple"><div class="stat-icon">📊</div><div class="stat-info"><div class="stat-value" id="exp-other">¥0</div><div class="stat-label">其他支出</div></div></div>
+</div>
+<div class="table-container"><div style="border:1px solid #fbbf24;border-radius:8px;overflow:hidden;background:#fffbeb">
+<div style="background:#fef3c7;padding:8px 12px;font-weight:600;font-size:13px;border-bottom:1px solid #fbbf24;display:flex;align-items:center;justify-content:space-between">
+<span>💸 支出记录</span>
+</div>
+<table class="data-table" style="border:none;margin:0;font-size:12px"><thead><tr style="background:#fde68a"><th style="padding:6px 8px;text-align:center;width:36px">序号</th><th data-col="bn" onclick="openGFilterPopup('bn',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">业务编号</th><th data-col="subBn" onclick="openGFilterPopup('subBn',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">子订单</th><th data-col="bt" onclick="openGFilterPopup('bt',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">类型</th><th data-col="sl" onclick="openGFilterPopup('sl',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">业务员</th><th data-col="co" onclick="openGFilterPopup('co',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">单位名称</th><th data-col="pfTime" onclick="openGFilterPopup('pfTime',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">支出时间</th><th data-col="expAccount" onclick="openGFilterPopup('expAccount',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">支出账号</th><th data-col="xm" onclick="openGFilterPopup('xm',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">支出金额</th><th data-col="cost" onclick="openGFilterPopup('cost',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">成本</th><th style="padding:6px 8px;text-align:left">申请截图</th><th style="padding:6px 8px;text-align:left">审批凭证</th><th data-col="rk" onclick="openGFilterPopup('rk',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">备注</th><th data-col="xf_user" onclick="openGFilterPopup('xf_user',this,_expCtx)" style="cursor:pointer;padding:6px 8px;text-align:left">审批人</th><th style="padding:6px 8px;text-align:center">操作</th></tr></thead><tbody id="expenses-tbody"></tbody></table></div></div>
+<div class="pagination" id="expenses-pagination"></div>
+<span class="page-size-wrapper">每页显示 <select class="page-size-select" onchange="setPageSize(this.value)"><option value="15" selected>15</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select> 条</span>
+</section>
+
+<section id="page-approval" class="content-page">
+<div class="page-header"><h2>审批中心</h2><span class="page-subtitle">订单财务审批</span></div>
+<div class="approval-stat-cards">
+<div class="stat-card blue card-active" data-appr-status="pending" onclick="switchStatusTab(this,'pending')"><div class="stat-icon">⏳</div><div class="stat-info"><div class="stat-value" id="appr-pending-count">0</div><div class="stat-label">待审批</div></div></div>
+<div class="stat-card green" data-appr-status="done" onclick="switchStatusTab(this,'done')"><div class="stat-icon">✅</div><div class="stat-info"><div class="stat-value" id="appr-done-count">0</div><div class="stat-label">已审批</div></div></div>
+<div class="stat-card red" data-appr-status="rejected" onclick="switchStatusTab(this,'rejected')"><div class="stat-icon">❌</div><div class="stat-info"><div class="stat-value" id="appr-rejected-count">0</div><div class="stat-label">已驳回</div></div></div>
+</div>
+<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+  <select id="appr-type-select" class="filter-select-beauty" onchange="onApprTypeChange()">
+    <option value="all">📋 全部类型</option>
+    <option value="pay">💰 收款</option>
+    <option value="exp">💸 支出</option>
+    <option value="inv">📄 开票</option>
+  </select>
+</div>
+<div id="approval-content"></div>
+</section>
+
+<section id="page-users" class="content-page">
+<div class="page-header"><h2>账号管理</h2><div class="page-actions"><input type="text" id="user-search" class="search-input" placeholder="搜索账号..." oninput="userPage=1;renderUserTable()"/><button class="btn-primary" onclick="openUserModal()">+ 新增账号</button></div></div>
+<div class="stats-grid" style="margin-bottom:24px">
+<div class="stat-card blue"><div class="stat-icon">👥</div><div class="stat-info"><div class="stat-value" id="user-total">0</div><div class="stat-label">总账号数</div></div></div>
+<div class="stat-card green"><div class="stat-icon">🔐</div><div class="stat-info"><div class="stat-value" id="user-active">0</div><div class="stat-label">管理员</div></div></div>
+<div class="stat-card orange"><div class="stat-icon">💼</div><div class="stat-info"><div class="stat-value" id="user-sales">0</div><div class="stat-label">销售员</div></div></div>
+</div>
+<div class="table-container"><table class="data-table"><thead><tr><th style="width:40px;text-align:center">序号</th><th data-col="username" onclick="openGFilterPopup('username',this,_userCtx)" style="cursor:pointer">用户名</th><th data-col="name" onclick="openGFilterPopup('name',this,_userCtx)" style="cursor:pointer">姓名</th><th data-col="account" onclick="openGFilterPopup('account',this,_userCtx)" style="cursor:pointer">对接账号</th><th data-col="payAccount" onclick="openGFilterPopup('payAccount',this,_userCtx)" style="cursor:pointer">收款账号</th><th data-col="expAccount" onclick="openGFilterPopup('expAccount',this,_userCtx)" style="cursor:pointer">支出账号</th><th data-col="role" onclick="openGFilterPopup('role',this,_userCtx)" style="cursor:pointer">角色</th><th>头像</th><th data-col="createdAt" onclick="openGFilterPopup('createdAt',this,_userCtx)" style="cursor:pointer">创建时间</th><th>最后登录</th><th>操作</th></tr></thead><tbody id="users-tbody"></tbody></table></div>
+<div class="pagination" id="users-pagination"></div>
+<span class="page-size-wrapper">每页显示 <select class="page-size-select" onchange="setPageSize(this.value)"><option value="15" selected>15</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select> 条</span>
+</section>
+
+<!-- 工资计算 -->
+<section id="page-salary" class="content-page">
+<div class="page-header"><h2>工资计算</h2><div class="page-actions">
+<select id="salary-filter-month" class="filter-select" onchange="renderSalaryPage()"><option value="">全部月份</option></select>
+<select id="salary-filter-sales" class="filter-select" onchange="renderSalaryPage()"><option value="">全部业务员</option></select>
+<button class="btn-primary" id="salary-set-rates-btn" onclick="openCommissionRateModal()" style="display:none">默认提成比例</button>
+<button class="btn-warning" onclick="exportSalary()" id="salary-export" style="display:none">导出工资表</button>
+</div></div>
+  <div class="stats-grid" style="margin-bottom:24px">
+<div class="stat-card green"><div class="stat-icon">💰</div><div class="stat-info"><div class="stat-value" id="salary-total">0</div><div class="stat-label">工资总额</div></div></div>
+<div class="stat-card blue"><div class="stat-icon">📊</div><div class="stat-info"><div class="stat-value" id="salary-avg">0</div><div class="stat-label">人均工资</div></div></div>
+<div class="stat-card orange"><div class="stat-icon">👥</div><div class="stat-info"><div class="stat-value" id="salary-count">0</div><div class="stat-label">业务员数</div></div></div>
+</div>
+<div class="table-container"><table class="data-table"><thead><tr><th style="width:40px;text-align:center">序号</th><th data-col="ordBn" onclick="openGFilterPopup('ordBn',this,_salaryCtx)" style="cursor:pointer">母订单编号</th><th data-col="subBn" onclick="openGFilterPopup('subBn',this,_salaryCtx)" style="cursor:pointer">子订单编号</th><th data-col="sales" onclick="openGFilterPopup('sales',this,_salaryCtx)" style="cursor:pointer">业务员</th><th data-col="bt" onclick="openGFilterPopup('bt',this,_salaryCtx)" style="cursor:pointer">类型</th><th data-col="pd" onclick="openGFilterPopup('pd',this,_salaryCtx)" style="cursor:pointer">收款时间</th><th data-col="pm" onclick="openGFilterPopup('pm',this,_salaryCtx)" style="cursor:pointer">收款金额</th><th data-col="cost" onclick="openGFilterPopup('cost',this,_salaryCtx)" style="cursor:pointer">成本</th><th data-col="exp" onclick="openGFilterPopup('exp',this,_salaryCtx)" style="cursor:pointer">支出</th><th data-col="profit" onclick="openGFilterPopup('profit',this,_salaryCtx)" style="cursor:pointer">利润</th><th data-col="rate" onclick="openGFilterPopup('rate',this,_salaryCtx)" style="cursor:pointer">提成比例</th><th data-col="comm" onclick="openGFilterPopup('comm',this,_salaryCtx)" style="cursor:pointer">佣金</th><th>操作</th></tr></thead><tbody id="salary-tbody"></tbody></table></div>
+<!-- 业务员汇总表 -->
+<div style="margin-top:24px"><h3 style="font-size:14px;color:#374151;margin-bottom:8px">业务员月度汇总</h3></div>
+<div class="table-container"><table class="data-table"><thead><tr><th>业务员</th><th>销售订单</th><th>续费订单</th><th>利润</th><th>佣金</th></tr></thead><tbody id="salary-summary-tbody"></tbody></table></div>
+</section>
+
+<!-- 开票申请 -->
+<section id="page-invoice" class="content-page">
+<div class="page-header"><h2>☁️ 开票申请</h2><div class="page-actions">
+<button class="btn-primary" onclick="openApplyInvoiceModal()" id="inv-apply-btn" style="display:none">+ 申请开票</button>
+</div></div>
+<div class="invoice-stats" style="display:flex;gap:16px;margin-bottom:16px">
+<div class="stat-card blue card-active" data-inv-status="pending" onclick="filterInvByStatus('pending')" style="cursor:pointer"><div class="stat-icon">☁️</div><div class="stat-info"><div class="stat-value" id="inv-pending-count">0</div><div class="stat-label">待开票</div></div></div>
+<div class="stat-card green" data-inv-status="approved" onclick="filterInvByStatus('approved')" style="cursor:pointer"><div class="stat-icon">✅</div><div class="stat-info"><div class="stat-value" id="inv-approved-count">0</div><div class="stat-label">已开票</div></div></div>
+<div class="stat-card red" data-inv-status="rejected" onclick="filterInvByStatus('rejected')" style="cursor:pointer"><div class="stat-icon">❌</div><div class="stat-info"><div class="stat-value" id="inv-rejected-count">0</div><div class="stat-label">已驳回</div></div></div>
+</div>
+<div class="table-container">
+<table class="data-table"><thead><tr>
+<th style="width:40px;text-align:center">序号</th><th data-col="bn" onclick="openGFilterPopup('bn',this,_invCtx)" style="cursor:pointer">业务编号</th>
+<th data-col="salesperson" onclick="openGFilterPopup('salesperson',this,_invCtx)" style="cursor:pointer">业务员</th>
+<th data-col="nick" onclick="openGFilterPopup('nick',this,_invCtx)" style="cursor:pointer">客户昵称</th>
+<th data-col="title" onclick="openGFilterPopup('title',this,_invCtx)" style="cursor:pointer">受票方</th>
+<th data-col="category" onclick="openGFilterPopup('category',this,_invCtx)" style="cursor:pointer">开票类目</th>
+<th data-col="priority" onclick="openGFilterPopup('priority',this,_invCtx)" style="cursor:pointer">优先级</th>
+<th data-col="amount" onclick="openGFilterPopup('amount',this,_invCtx)" style="cursor:pointer">开票金额</th>
+<th data-col="ourUnit" onclick="openGFilterPopup('ourUnit',this,_invCtx)" style="cursor:pointer">我方开票单位</th>
+<th data-col="invType" onclick="openGFilterPopup('invType',this,_invCtx)" style="cursor:pointer">发票类型</th>
+<th data-col="status" onclick="openGFilterPopup('status',this,_invCtx)" style="cursor:pointer">状态</th>
+<th data-col="appliedAt" onclick="openGFilterPopup('appliedAt',this,_invCtx)" style="cursor:pointer">申请时间</th>
+<th data-col="appliedBy" onclick="openGFilterPopup('appliedBy',this,_invCtx)" style="cursor:pointer">申请人</th>
+<th data-col="approvedBy" onclick="openGFilterPopup('approvedBy',this,_invCtx)" style="cursor:pointer">审批人</th>
+<th>操作</th>
+</tr></thead><tbody id="invoice-tbody"></tbody></table></div>
+</section>
+
+<!-- 操作日志 -->
+<section id="page-audit" class="content-page">
+<div class="page-header"><h2>📜 操作日志</h2><span class="page-subtitle">最近100条操作记录</span></div>
+<div class="table-container" style="padding:16px">
+  <div style="overflow-x:auto">
+    <table class="data-table" id="audit-table">
+      <thead><tr><th data-col="ts" onclick="openGFilterPopup('ts',this,_auditCtx)" style="cursor:pointer">时间</th><th data-col="username" onclick="openGFilterPopup('username',this,_auditCtx)" style="cursor:pointer">操作人</th><th data-col="action" onclick="openGFilterPopup('action',this,_auditCtx)" style="cursor:pointer">操作</th><th data-col="table_name" onclick="openGFilterPopup('table_name',this,_auditCtx)" style="cursor:pointer">数据表</th><th data-col="summary" onclick="openGFilterPopup('summary',this,_auditCtx)" style="cursor:pointer">摘要</th></tr></thead>
+      <tbody id="audit-tbody"></tbody>
+    </table>
+  </div>
+  <div id="audit-empty" style="text-align:center;padding:40px;color:#999;display:none">暂无操作记录</div>
+</div>
+</section>
+
+<!-- 设置页面（桌面版可用） -->
+<section id="page-settings" class="content-page">
+<div class="page-header"><h2>⚙️ 设置</h2></div>
+<div style="padding:24px;max-width:600px;background:#fff;border-radius:var(--r-lg);box-shadow:var(--shadow-sm)">
+  <div class="form-group">
+    <label>地址材料文件夹路径</label>
+    <input type="text" id="cfg-address-dir" class="form-input" style="width:100%;font-size:13px">
+  </div>
+  <div class="form-group">
+    <label>合同模板文件路径</label>
+    <input type="text" id="cfg-template-path" class="form-input" style="width:100%;font-size:13px">
+  </div>
+  <div class="form-group">
+    <label>合同输出目录路径</label>
+    <input type="text" id="cfg-output-base" class="form-input" style="width:100%;font-size:13px">
+  </div>
+  <div class="form-group">
+    <label>字体文件路径</label>
+    <input type="text" id="cfg-font-path" class="form-input" style="width:100%;font-size:13px" value="C:\Windows\Fonts\simkai.ttf">
+  </div>
+  <div style="margin-top:16px">
+    <button class="btn-primary" onclick="saveConfig()" style="padding:10px 24px">💾 保存配置</button>
+    <button class="btn-secondary" onclick="loadConfig()" style="margin-left:8px">🔄 刷新</button>
+  </div>
+  <div id="cfg-status" style="margin-top:8px;font-size:13px;color:#888"></div>
+</div>
+</section>
+
+<!-- 合同管理 -->
+<section id="page-contracts" class="content-page">
+<div class="page-header"><h2>📝 合同管理</h2><div class="page-actions"><button class="btn-primary" onclick="generateContractFromOrder()" id="contract-gen-btn">+ 生成合同</button></div></div>
+<div id="contracts-list"></div>
+</section>
+
+<!-- 消息通知 -->
+<section id="page-notifications" class="content-page">
+<div class="page-header"><h2>🔔 消息通知</h2><div class="page-actions"><button class="btn-secondary" onclick="clearAllNotifications();renderNotificationsPage()">全部已读</button></div></div>
+<div id="notifications-list" style="max-width:700px"></div>
+</section>
+
+</div></main></div>
+
+<!-- 弹窗 -->
+<div id="modal-overlay" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3 id="modal-title">标题</h3><button class="modal-close" onclick="closeModal()">&times;</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer"><button class="btn-secondary" onclick="closeModal()">取消</button><button class="btn-primary" id="modal-confirm">确认</button></div></div></div>
+<div id="toast-container"></div>
+
+<script src="app.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js" async></script>
+</body>
+</html>
+
