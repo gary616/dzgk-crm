@@ -776,12 +776,15 @@ async function autoLogin(){
     curUser=user;curRole=user.role;
     $('login-page').style.display='none';
     $('main-app').style.display='flex';
+    // 优先初始化导航（用 session 信息），不等待数据加载完毕
+    initNav();
     navigateTo('dashboard');
     await loadFromServer();
     curUser=DB_USERS.find(function(u){return u.username===user.username})||curUser;
     curRole=curUser.role;
     $('user-name').textContent=curUser.name;$('user-role').textContent=RN[curUser.role];$('user-avatar').textContent=curUser.avatar;
     origAddrs=JSON.stringify(DB_ADDRESS);origOrders=JSON.stringify(DB_ORDERS);origCusts=JSON.stringify(DB_CUSTOMERS);origUsers=JSON.stringify(DB_USERS);origExp=JSON.stringify(DB_EXPENSES);origInvs=JSON.stringify(DB_INVOICES);origNotifs=JSON.stringify(DB_NOTIFICATIONS);
+    // 数据加载后重新初始化导航（更新用户权限信息）
     initNav();
     initDataPermButtons();
     updateNavBadges();
@@ -3183,6 +3186,9 @@ var _expandedCustomers={};
 function toggleCustomer(key){
   _expandedCustomers[key]=!_expandedCustomers[key];
   renderOrdersTable();
+  // 展开子订单后强制重排（移动端 Safari 需要）
+  var tb=document.getElementById('orders-tbody');
+  if(tb){void tb.offsetHeight;setTimeout(function(){void(tb.offsetHeight);},100);}
 }
 // ---- 订单表列头筛选面板 ----
 var _orderFilterDefs={
@@ -3602,12 +3608,15 @@ function renderOrdersTable(){
         html+='<span class="sub-col" data-col="rk" style="flex:0 0 '+subColWidths.rk+'px;padding-right:8px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-right:1px solid #cbd5e1" title="'+esc(it.rk||'')+'">'+esc(it.rk||'')+'</span>';
         var editBtn='<button class="btn-edit" onclick="event.stopPropagation();editSubOrder('+o.id+','+j+')" style="padding:2px 6px;font-size:11px">编辑</button> ';
         var detailBtn='<button class="btn-secondary" onclick="event.stopPropagation();showItemDetail('+o.id+','+j+')" style="padding:2px 6px;font-size:11px">详情</button> ';
-        html+='<span class="sub-col" data-col="action" style="flex:1 1 '+subColWidths.action+'px;box-sizing:border-box;overflow:hidden;text-align:left">'+editBtn+detailBtn+delBtn+'</span>';
+        html+='<span class="sub-col" data-col="action" style="flex:1 1 '+subColWidths.action+'px;box-sizing:border-box;overflow:hidden;white-space:nowrap;text-align:left">'+editBtn+detailBtn+delBtn+'</span>';
         html+='</div></td></tr>';
       }
     }
   }
   tb.innerHTML=html||'<tr><td colspan="19" class="empty-state"><p>暂无订单</p></td></tr>';
+  // 强制重排解决移动端 Safari 子订单 flex 布局不渲染的问题
+  void tb.offsetHeight;
+  setTimeout(function(){void(tb.offsetHeight);},100);
   buildPg($('orders-pagination'),Math.ceil(data.length/PS_ORD)||1,og,function(p){og=p;renderOrdersTable()});
   // 同步隐藏列和筛选指示器
   var oHiddenCols=_getOrderHiddenCols();
